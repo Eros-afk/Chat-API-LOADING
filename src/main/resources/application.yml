@@ -1,0 +1,4 @@
+spring:
+  profiles:
+    active: dev
+#Usado para trocar entre desenvolvimento (dev) e produto final(prod)
