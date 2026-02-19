@@ -1,4 +1,4 @@
 spring:
   profiles:
-    active: dev
+    active: prod
 #Usado para trocar entre desenvolvimento (dev) e produto final(prod)
