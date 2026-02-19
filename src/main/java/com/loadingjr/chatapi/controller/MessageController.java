@@ -37,10 +37,10 @@ public class MessageController {
     }
     
     @Operation(summary = "Mostra as mensagnes por página")
-    @GetMapping("/{chatId}/messages")
-    public Page<Message> getMessages(
+    @GetMapping("/{chatId}/page")
+    public Page<MessageResponseDTO> getMessages(
             @PathVariable Long chatId,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable
     ) {
         return messageService.getMessages(chatId, pageable);
     }

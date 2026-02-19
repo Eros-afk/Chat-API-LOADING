@@ -82,13 +82,19 @@ public class MessageService {
         return messageRepository.save(message);
     }
     
-    public Page<Message> getMessages(Long chatId, Pageable pageable) {
+    public Page<MessageResponseDTO> getMessages(Long chatId, Pageable pageable) {
+
         Page<Message> page = messageRepository.findByChatId(chatId, pageable);
 
-        page.forEach(m ->
-            m.setContent(cryptoService.decrypt(m.getContent()))
-        );
-
-        return page;
+        return page.map(message -> new MessageResponseDTO(
+                message.getId(),
+                cryptoService.decrypt(message.getContent()),
+                message.getCreatedAt(),
+                new UserResponseDTO(
+                        message.getSender().getId(),
+                        message.getSender().getUsername()
+                )
+        ));
     }
+
 }
