@@ -1,6 +1,12 @@
 package com.loadingjr.chatapi.service;
 
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import com.loadingjr.chatapi.domain.dto.ChatResponseDTO;
 import com.loadingjr.chatapi.domain.dto.CreateChatDTO;
 import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
 import com.loadingjr.chatapi.domain.entity.Chat;
@@ -85,6 +91,22 @@ public class ChatService {
         chat.setClosedAt(java.time.LocalDateTime.now());
 
         return chatRepository.save(chat);
+    }
+    
+    public List<ChatResponseDTO> getChatsByUser(Long userId) {
+
+        List<Chat> chats = chatRepository
+        		.findByUser1IdOrUser2Id(userId, userId);
+
+        return chats.stream()
+                .map(chat -> new ChatResponseDTO(
+                        chat.getId(),
+                        chat.getUser1().getUsername(),
+                        chat.getUser2().getUsername(),
+                        chat.getStatus().name(),
+                        chat.getCreatedAt()
+                ))
+                .toList();
     }
 
 }
