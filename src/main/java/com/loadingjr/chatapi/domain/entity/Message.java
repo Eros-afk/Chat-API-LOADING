@@ -21,6 +21,7 @@ public class Message {
     @Column(nullable = false)
     private String content;
 
+    //@Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist

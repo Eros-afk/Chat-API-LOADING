@@ -9,3 +9,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+chat:
+ crypto:
+  secret: 1234567890123456

@@ -10,6 +10,8 @@ import com.loadingjr.chatapi.domain.enums.ChatStatus;
 import com.loadingjr.chatapi.repository.ChatRepository;
 import com.loadingjr.chatapi.repository.MessageRepository;
 import com.loadingjr.chatapi.repository.UserRepository;
+import com.loadingjr.chatapi.util.CryptoService;
+
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,13 +22,16 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final CryptoService cryptoService;
 
     public MessageService(MessageRepository messageRepository,
                           ChatRepository chatRepository,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          CryptoService cryptoService) {
         this.messageRepository = messageRepository;
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
+        this.cryptoService = cryptoService;
     }
     
     public List<MessageResponseDTO> getMessagesByChat(Long chatId) {
@@ -38,7 +43,7 @@ public class MessageService {
                 .stream()
                 .map(message -> new MessageResponseDTO(
                         message.getId(),
-                        message.getContent(),
+                        cryptoService.decrypt(message.getContent()),
                         message.getCreatedAt(),
                         new UserResponseDTO(
                                 message.getSender().getId(),
@@ -68,8 +73,9 @@ public class MessageService {
         Message message = new Message();
         message.setChat(chat);
         message.setSender(sender);
-        message.setContent(dto.content());
-
+        message.setContent(cryptoService.encrypt(dto.content()));
+        //message.setCreatedAt(LocalDateTime.now());
+        
         return messageRepository.save(message);
     }
 }
