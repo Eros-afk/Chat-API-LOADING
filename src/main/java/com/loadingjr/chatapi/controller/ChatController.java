@@ -1,12 +1,17 @@
 package com.loadingjr.chatapi.controller;
 
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.loadingjr.chatapi.domain.dto.CreateChatDTO;
+import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
 import com.loadingjr.chatapi.domain.entity.Chat;
 import com.loadingjr.chatapi.service.ChatService;
+
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.*;
-import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
-import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
 
 
 @RestController
