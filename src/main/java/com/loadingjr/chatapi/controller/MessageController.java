@@ -4,6 +4,8 @@ import com.loadingjr.chatapi.domain.dto.MessageResponseDTO;
 import com.loadingjr.chatapi.domain.dto.SendMessageDTO;
 import com.loadingjr.chatapi.domain.entity.Message;
 import com.loadingjr.chatapi.service.MessageService;
+
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +25,7 @@ public class MessageController {
         return messageService.sendMessage(dto);
     }
     
+    @Operation(summary = "Mostra as mensagens pelo Id do chat")
     @GetMapping("/chat/{chatId}")
     public List<MessageResponseDTO> getByChat(@PathVariable Long chatId) {
         return messageService.getMessagesByChat(chatId);

@@ -11,6 +11,7 @@ import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
 import com.loadingjr.chatapi.domain.entity.Chat;
 import com.loadingjr.chatapi.service.ChatService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 
 
@@ -23,17 +24,20 @@ public class ChatController {
     public ChatController(ChatService chatService) {
         this.chatService = chatService;
     }
-
+    
+    @Operation(summary = "Cria um novo chat")
     @PostMapping
     public Chat create(@RequestBody @Valid CreateChatDTO dto) {
         return chatService.createChat(dto);
     }
     
+    @Operation(summary = "Aceita ou nega a Requisição")
     @PostMapping("/respond")
     public Chat respond(@RequestBody @Valid RespondChatDTO dto) {
         return chatService.respondToChat(dto);
     }
     
+    @Operation(summary = "Fecha o chat pelo Id")
     @PostMapping("/close/{chatId}")
     public Chat close(@PathVariable Long chatId) {
         return chatService.closeChat(chatId);
