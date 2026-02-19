@@ -10,6 +10,11 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+
 @RestController
 @RequestMapping("/messages")
 public class MessageController {
@@ -30,5 +35,15 @@ public class MessageController {
     public List<MessageResponseDTO> getByChat(@PathVariable Long chatId) {
         return messageService.getMessagesByChat(chatId);
     }
+    
+    @Operation(summary = "Mostra as mensagnes por página")
+    @GetMapping("/{chatId}/messages")
+    public Page<Message> getMessages(
+            @PathVariable Long chatId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return messageService.getMessages(chatId, pageable);
+    }
+
 
 }

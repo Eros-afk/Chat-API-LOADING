@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 @Service
 public class MessageService {
 
@@ -77,5 +80,15 @@ public class MessageService {
         //message.setCreatedAt(LocalDateTime.now());
         
         return messageRepository.save(message);
+    }
+    
+    public Page<Message> getMessages(Long chatId, Pageable pageable) {
+        Page<Message> page = messageRepository.findByChatId(chatId, pageable);
+
+        page.forEach(m ->
+            m.setContent(cryptoService.decrypt(m.getContent()))
+        );
+
+        return page;
     }
 }
