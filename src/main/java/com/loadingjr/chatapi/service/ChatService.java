@@ -9,6 +9,7 @@ import com.loadingjr.chatapi.domain.enums.ChatStatus;
 import com.loadingjr.chatapi.exception.BusinessRuleException;
 import com.loadingjr.chatapi.exception.NotFoundException;
 import com.loadingjr.chatapi.repository.ChatRepository;
+import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 import com.loadingjr.chatapi.repository.UserRepository;
 import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 import org.springframework.stereotype.Service;
