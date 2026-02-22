@@ -7,6 +7,9 @@ import com.loadingjr.chatapi.domain.entity.Chat;
 import com.loadingjr.chatapi.domain.entity.Message;
 import com.loadingjr.chatapi.domain.entity.User;
 import com.loadingjr.chatapi.domain.enums.ChatStatus;
+import com.loadingjr.chatapi.exception.BusinessRuleException;
+import com.loadingjr.chatapi.exception.NotFoundException;
+import com.loadingjr.chatapi.exception.UnauthorizedActionException;
 import com.loadingjr.chatapi.repository.ChatRepository;
 import com.loadingjr.chatapi.repository.MessageRepository;
 import com.loadingjr.chatapi.repository.UserRepository;
@@ -48,7 +51,7 @@ public class MessageService {
 
         if (!chat.getUser1().getId().equals(authenticatedUserId) &&
             !chat.getUser2().getId().equals(authenticatedUserId)) {
-            throw new RuntimeException("Você não pode acessar este chat");
+            throw new UnauthorizedActionException("Você não pode acessar este chat");
         }
 
         return messageRepository.findByChatIdOrderByCreatedAtAsc(chat.getId())
@@ -70,15 +73,15 @@ public class MessageService {
         Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
 
         Chat chat = chatRepository.findById(dto.chatId())
-                .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
 
         if (chat.getStatus() != ChatStatus.ACTIVE) {
-            throw new RuntimeException("Chat não está ativo");
+            throw new BusinessRuleException("Chat não está ativo");
         }
 
         if (!chat.getUser1().getId().equals(authenticatedUserId) &&
             !chat.getUser2().getId().equals(authenticatedUserId)) {
-            throw new RuntimeException("Você não participa deste chat");
+            throw new UnauthorizedActionException("Você não participa deste chat");
         }
 
         User sender = userRepository.findById(authenticatedUserId)

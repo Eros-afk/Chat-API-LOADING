@@ -2,6 +2,7 @@ package com.loadingjr.chatapi.service;
 
 import com.loadingjr.chatapi.domain.dto.UserRegisterDTO;
 import com.loadingjr.chatapi.domain.entity.User;
+import com.loadingjr.chatapi.exception.BusinessRuleException;
 import com.loadingjr.chatapi.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ public class UserService {
 
         userRepository.findByUsername(dto.username())
                 .ifPresent(u -> {
-                    throw new RuntimeException("Username já existe");
+                    throw new BusinessRuleException("Username já existe");
                 });
 
         User user = new User();
