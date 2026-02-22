@@ -11,14 +11,13 @@ import com.loadingjr.chatapi.repository.ChatRepository;
 import com.loadingjr.chatapi.repository.MessageRepository;
 import com.loadingjr.chatapi.repository.UserRepository;
 import com.loadingjr.chatapi.util.CryptoService;
+import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class MessageService {
@@ -27,15 +26,18 @@ public class MessageService {
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
     private final CryptoService cryptoService;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public MessageService(MessageRepository messageRepository,
                           ChatRepository chatRepository,
                           UserRepository userRepository,
-                          CryptoService cryptoService) {
+                          CryptoService cryptoService,
+                          AuthenticatedUserProvider authenticatedUserProvider) {
         this.messageRepository = messageRepository;
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
         this.cryptoService = cryptoService;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
     
     public List<MessageResponseDTO> getMessagesByChat(Long chatId) {
@@ -43,10 +45,7 @@ public class MessageService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
         
-        Long authenticatedUserId = (Long) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+        Long authenticatedUserId = authenticatedUserProvider.getCurrentUserId();
 
         if (!chat.getUser1().getId().equals(authenticatedUserId) &&
             !chat.getUser2().getId().equals(authenticatedUserId)) {
@@ -69,10 +68,7 @@ public class MessageService {
 
     public Message sendMessage(SendMessageDTO dto) {
     	
-    	Long authenticatedUserId = (Long) SecurityContextHolder
-    	            .getContext()
-    	            .getAuthentication()
-    	            .getPrincipal();
+    	Long authenticatedUserId = authenticatedUserProvider.getCurrentUserId();
 
     	if (!authenticatedUserId.equals(dto.senderId())) {
     	        throw new RuntimeException("Usuário não autorizado");

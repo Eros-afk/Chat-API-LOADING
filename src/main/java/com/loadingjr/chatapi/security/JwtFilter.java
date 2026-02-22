@@ -38,7 +38,7 @@ public class JwtFilter implements Filter {
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                userId,
+                                userId.toString(),
                                 null,
                                 Collections.emptyList()
                         );

@@ -4,7 +4,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.loadingjr.chatapi.domain.dto.ChatResponseDTO;
 import com.loadingjr.chatapi.domain.dto.CreateChatDTO;
@@ -13,6 +12,7 @@ import com.loadingjr.chatapi.domain.entity.Chat;
 import com.loadingjr.chatapi.domain.entity.User;
 import com.loadingjr.chatapi.domain.enums.ChatStatus;
 import com.loadingjr.chatapi.repository.ChatRepository;
+import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 import com.loadingjr.chatapi.repository.UserRepository;
 
 
@@ -21,11 +21,14 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public ChatService(ChatRepository chatRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       AuthenticatedUserProvider authenticatedUserProvider) {
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     public Chat createChat(CreateChatDTO dto) {
@@ -111,10 +114,7 @@ public class ChatService {
 
     public List<Chat> getMyChats() {
 
-        Long authenticatedUserId = (Long) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+        Long authenticatedUserId = authenticatedUserProvider.getCurrentUserId();
 
         return chatRepository.findByUser1IdOrUser2Id(
                 authenticatedUserId,
