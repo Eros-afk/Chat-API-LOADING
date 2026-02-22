@@ -1,6 +1,5 @@
 package com.loadingjr.chatapi.security;
 
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -8,10 +7,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthenticatedUserProvider {
 
-    public Long getCurrentUserId() {
+    public Long getAuthenticatedUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+        if (authentication == null || authentication.getPrincipal() == null) {
             throw new RuntimeException("Usuário não autenticado");
         }
 
@@ -21,14 +20,6 @@ public class AuthenticatedUserProvider {
             return userId;
         }
 
-        if (principal instanceof String principalAsString) {
-            try {
-                return Long.parseLong(principalAsString);
-            } catch (NumberFormatException ex) {
-                throw new RuntimeException("Principal inválido no contexto de autenticação");
-            }
-        }
-
-        throw new RuntimeException("Principal inválido no contexto de autenticação");
+        throw new RuntimeException("Principal de autenticação inválido");
     }
 }
