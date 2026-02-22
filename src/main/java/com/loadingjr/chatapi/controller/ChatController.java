@@ -52,4 +52,10 @@ public class ChatController {
     public List<ChatResponseDTO> getChatsByUser(@PathVariable Long userId) {
         return chatService.getChatsByUser(userId);
     }
+    
+    @Operation(summary = "Buscas os chats do usuário")
+    @GetMapping("/my-chats")
+    public List<Chat> getMyChats() {
+        return chatService.getMyChats();
+    }
 }

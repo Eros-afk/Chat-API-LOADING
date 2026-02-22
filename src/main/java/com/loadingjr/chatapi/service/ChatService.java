@@ -109,4 +109,17 @@ public class ChatService {
                 .toList();
     }
 
+    public List<Chat> getMyChats() {
+
+        Long authenticatedUserId = (Long) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        return chatRepository.findByUser1IdOrUser2Id(
+                authenticatedUserId,
+                authenticatedUserId
+        );
+    }
+
 }

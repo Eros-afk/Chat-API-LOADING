@@ -18,6 +18,7 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class MessageService {
@@ -41,7 +42,17 @@ public class MessageService {
 
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+        
+        Long authenticatedUserId = (Long) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
 
+        if (!chat.getUser1().getId().equals(authenticatedUserId) &&
+            !chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new RuntimeException("Você não pode acessar este chat");
+        }
+        
         return messageRepository.findByChatIdOrderByCreatedAtAsc(chat.getId())
                 .stream()
                 .map(message -> new MessageResponseDTO(
@@ -57,6 +68,15 @@ public class MessageService {
     }
 
     public Message sendMessage(SendMessageDTO dto) {
+    	
+    	Long authenticatedUserId = (Long) SecurityContextHolder
+    	            .getContext()
+    	            .getAuthentication()
+    	            .getPrincipal();
+
+    	if (!authenticatedUserId.equals(dto.senderId())) {
+    	        throw new RuntimeException("Usuário não autorizado");
+    	}
 
         Chat chat = chatRepository.findById(dto.chatId())
                 .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
@@ -65,6 +85,11 @@ public class MessageService {
             throw new RuntimeException("Chat não está ativo");
         }
 
+        if (!chat.getUser1().getId().equals(authenticatedUserId) &&
+            !chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new RuntimeException("Você não participa deste chat");
+        }
+        
         User sender = userRepository.findById(dto.senderId())
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
