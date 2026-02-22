@@ -25,6 +25,7 @@ public class MessageController {
         this.messageService = messageService;
     }
 
+    @Operation(summary = "Envia mensagem no chat autenticado pelo remetente do token")
     @PostMapping
     public Message send(@RequestBody @Valid SendMessageDTO dto) {
         return messageService.sendMessage(dto);
