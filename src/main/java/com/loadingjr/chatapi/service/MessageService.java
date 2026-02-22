@@ -7,13 +7,15 @@ import com.loadingjr.chatapi.domain.entity.Chat;
 import com.loadingjr.chatapi.domain.entity.Message;
 import com.loadingjr.chatapi.domain.entity.User;
 import com.loadingjr.chatapi.domain.enums.ChatStatus;
+import com.loadingjr.chatapi.exception.BusinessRuleException;
+import com.loadingjr.chatapi.exception.NotFoundException;
+import com.loadingjr.chatapi.exception.UnauthorizedActionException;
 import com.loadingjr.chatapi.repository.ChatRepository;
 import com.loadingjr.chatapi.repository.MessageRepository;
 import com.loadingjr.chatapi.repository.UserRepository;
 import com.loadingjr.chatapi.util.CryptoService;
 
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -41,7 +43,7 @@ public class MessageService {
     public List<MessageResponseDTO> getMessagesByChat(Long chatId) {
 
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
         
         Long authenticatedUserId = (Long) SecurityContextHolder
                 .getContext()
@@ -50,7 +52,7 @@ public class MessageService {
 
         if (!chat.getUser1().getId().equals(authenticatedUserId) &&
             !chat.getUser2().getId().equals(authenticatedUserId)) {
-            throw new RuntimeException("Você não pode acessar este chat");
+            throw new UnauthorizedActionException("Você não pode acessar este chat");
         }
         
         return messageRepository.findByChatIdOrderByCreatedAtAsc(chat.getId())
@@ -75,34 +77,33 @@ public class MessageService {
     	            .getPrincipal();
 
     	if (!authenticatedUserId.equals(dto.senderId())) {
-    	        throw new RuntimeException("Usuário não autorizado");
+    	        throw new UnauthorizedActionException("Usuário não autorizado");
     	}
 
         Chat chat = chatRepository.findById(dto.chatId())
-                .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
 
         if (chat.getStatus() != ChatStatus.ACTIVE) {
-            throw new RuntimeException("Chat não está ativo");
+            throw new BusinessRuleException("Chat não está ativo");
         }
 
         if (!chat.getUser1().getId().equals(authenticatedUserId) &&
             !chat.getUser2().getId().equals(authenticatedUserId)) {
-            throw new RuntimeException("Você não participa deste chat");
+            throw new UnauthorizedActionException("Você não participa deste chat");
         }
         
         User sender = userRepository.findById(dto.senderId())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
 
         if (!chat.getUser1().getId().equals(sender.getId()) &&
             !chat.getUser2().getId().equals(sender.getId())) {
-            throw new RuntimeException("Usuário não pertence a este chat");
+            throw new BusinessRuleException("Usuário não pertence a este chat");
         }
 
         Message message = new Message();
         message.setChat(chat);
         message.setSender(sender);
         message.setContent(cryptoService.encrypt(dto.content()));
-        //message.setCreatedAt(LocalDateTime.now());
         
         return messageRepository.save(message);
     }
