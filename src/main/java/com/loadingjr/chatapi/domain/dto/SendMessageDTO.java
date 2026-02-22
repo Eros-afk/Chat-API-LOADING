@@ -5,13 +5,13 @@ import jakarta.validation.constraints.NotNull;
 
 public record SendMessageDTO(
 
-        @NotNull
+        @NotNull(message = "Chat é obrigatório")
         Long chatId,
 
-        @NotNull
+        @NotNull(message = "Sender é obrigatório")
         Long senderId,
 
-        @NotBlank
+        @NotBlank(message = "Mensagem não pode estar vazia")
         String content
 
 ) {}

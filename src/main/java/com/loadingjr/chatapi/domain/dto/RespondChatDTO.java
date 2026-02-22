@@ -4,10 +4,10 @@ import jakarta.validation.constraints.NotNull;
 
 public record RespondChatDTO(
 
-        @NotNull
+        @NotNull(message = "Id do chat é obrigatório")
         Long chatId,
 
-        @NotNull
+        @NotNull (message = "É necessário aceitar ou recusar")
         Boolean accept
 
 ) {}
