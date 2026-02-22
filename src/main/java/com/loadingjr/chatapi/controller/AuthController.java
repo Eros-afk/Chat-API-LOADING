@@ -1,44 +1,26 @@
 package com.loadingjr.chatapi.controller;
 
+import com.loadingjr.chatapi.domain.dto.AuthTokenResponseDTO;
 import com.loadingjr.chatapi.domain.dto.LoginDTO;
-import com.loadingjr.chatapi.domain.entity.User;
-import com.loadingjr.chatapi.exception.InvalidCredentialsException;
-import com.loadingjr.chatapi.exception.NotFoundException;
-import com.loadingjr.chatapi.repository.UserRepository;
-import com.loadingjr.chatapi.security.JwtService;
+import com.loadingjr.chatapi.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final JwtService jwtService;
-    private final PasswordEncoder passwordEncoder;
+    private final AuthService authService;
 
-    public AuthController(UserRepository userRepository,
-                          JwtService jwtService,
-                          PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.jwtService = jwtService;
-        this.passwordEncoder = passwordEncoder;
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
-    
+
     @Operation(summary = "Faz o login do usuário")
     @PostMapping("/login")
-    public String login(@RequestBody LoginDTO dto) {
-
-        User user = userRepository.findByUsername(dto.username())
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
-
-        if (!passwordEncoder.matches(dto.password(), user.getPassword())) {
-            throw new InvalidCredentialsException("Senha inválida");
-        }
-
-        return jwtService.generateToken(user.getId());
+    public AuthTokenResponseDTO login(@RequestBody LoginDTO dto) {
+        return authService.login(dto);
     }
 }

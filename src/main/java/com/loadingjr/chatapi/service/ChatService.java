@@ -1,11 +1,5 @@
 package com.loadingjr.chatapi.service;
 
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-
-import org.springframework.security.core.context.SecurityContextHolder;
-
 import com.loadingjr.chatapi.domain.dto.ChatResponseDTO;
 import com.loadingjr.chatapi.domain.dto.CreateChatDTO;
 import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
@@ -16,28 +10,36 @@ import com.loadingjr.chatapi.exception.BusinessRuleException;
 import com.loadingjr.chatapi.exception.NotFoundException;
 import com.loadingjr.chatapi.repository.ChatRepository;
 import com.loadingjr.chatapi.repository.UserRepository;
+import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
+import org.springframework.stereotype.Service;
 
+import java.util.List;
 
 @Service
 public class ChatService {
 
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public ChatService(ChatRepository chatRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       AuthenticatedUserProvider authenticatedUserProvider) {
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     public Chat createChat(CreateChatDTO dto) {
 
-        if (dto.requesterId().equals(dto.receiverId())) {
-            throw new BusinessRuleException("Não pode criar chat consigo mesmo");
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
+
+        if (authenticatedUserId.equals(dto.receiverId())) {
+            throw new RuntimeException("Não pode criar chat consigo mesmo");
         }
 
-        User requester = userRepository.findById(dto.requesterId())
-                .orElseThrow(() -> new NotFoundException("Solicitante não encontrado"));
+        User requester = userRepository.findById(authenticatedUserId)
+                .orElseThrow(() -> new RuntimeException("Solicitante não encontrado"));
 
         User receiver = userRepository.findById(dto.receiverId())
                 .orElseThrow(() -> new NotFoundException("Destinatário não encontrado"));
@@ -49,7 +51,7 @@ public class ChatService {
 
         return chatRepository.save(chat);
     }
-    
+
     public Chat respondToChat(RespondChatDTO dto) {
 
         Chat chat = chatRepository.findById(dto.chatId())
@@ -79,7 +81,7 @@ public class ChatService {
 
         return chatRepository.save(chat);
     }
-    
+
     public Chat closeChat(Long chatId) {
 
         Chat chat = chatRepository.findById(chatId)
@@ -94,7 +96,7 @@ public class ChatService {
 
         return chatRepository.save(chat);
     }
-    
+
     public List<ChatResponseDTO> getChatsByUser(Long userId) {
 
         List<Chat> chats = chatRepository
@@ -113,10 +115,7 @@ public class ChatService {
 
     public List<Chat> getMyChats() {
 
-        Long authenticatedUserId = (Long) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
 
         return chatRepository.findByUser1IdOrUser2Id(
                 authenticatedUserId,

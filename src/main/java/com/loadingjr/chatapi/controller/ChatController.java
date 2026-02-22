@@ -29,7 +29,7 @@ public class ChatController {
         this.chatService = chatService;
     }
     
-    @Operation(summary = "Cria um novo chat")
+    @Operation(summary = "Cria um novo chat para o usuário autenticado com o destinatário informado")
     @PostMapping
     public Chat create(@RequestBody @Valid CreateChatDTO dto) {
         return chatService.createChat(dto);
