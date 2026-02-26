@@ -14,4 +14,13 @@ public record SendMessageDTO(
         @NotBlank(message = "Mensagem não pode estar vazia")
         String content
 
-) {}
+) {
+
+    /**
+     * Mantém compatibilidade com chamadas antigas que enviavam o ID do destinatário.
+     * O segundo parâmetro não é mais utilizado.
+     */
+    public SendMessageDTO(Long chatId, Long ignoredReceiverId, String content) {
+        this(chatId, content);
+    }
+}
