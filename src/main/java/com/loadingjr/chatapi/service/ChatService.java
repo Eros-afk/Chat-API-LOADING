@@ -1,44 +1,49 @@
 package com.loadingjr.chatapi.service;
 
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-
-import org.springframework.security.core.context.SecurityContextHolder;
-
 import com.loadingjr.chatapi.domain.dto.ChatResponseDTO;
 import com.loadingjr.chatapi.domain.dto.CreateChatDTO;
 import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
 import com.loadingjr.chatapi.domain.entity.Chat;
 import com.loadingjr.chatapi.domain.entity.User;
 import com.loadingjr.chatapi.domain.enums.ChatStatus;
+import com.loadingjr.chatapi.exception.BusinessRuleException;
+import com.loadingjr.chatapi.exception.NotFoundException;
 import com.loadingjr.chatapi.repository.ChatRepository;
+import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 import com.loadingjr.chatapi.repository.UserRepository;
+import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
+import org.springframework.stereotype.Service;
 
+import java.util.List;
 
 @Service
 public class ChatService {
 
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     public ChatService(ChatRepository chatRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       AuthenticatedUserProvider authenticatedUserProvider) {
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     public Chat createChat(CreateChatDTO dto) {
 
-        if (dto.requesterId().equals(dto.receiverId())) {
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
+
+        if (authenticatedUserId.equals(dto.receiverId())) {
             throw new RuntimeException("Não pode criar chat consigo mesmo");
         }
 
-        User requester = userRepository.findById(dto.requesterId())
+        User requester = userRepository.findById(authenticatedUserId)
                 .orElseThrow(() -> new RuntimeException("Solicitante não encontrado"));
 
         User receiver = userRepository.findById(dto.receiverId())
-                .orElseThrow(() -> new RuntimeException("Destinatário não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Destinatário não encontrado"));
 
         Chat chat = new Chat();
         chat.setUser1(requester);
@@ -47,26 +52,26 @@ public class ChatService {
 
         return chatRepository.save(chat);
     }
-    
+
     public Chat respondToChat(RespondChatDTO dto) {
 
         Chat chat = chatRepository.findById(dto.chatId())
-                .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
 
         if (chat.getStatus() != ChatStatus.PENDING) {
-            throw new RuntimeException("Chat não está pendente");
+            throw new BusinessRuleException("Chat não está pendente");
         }
 
         if (dto.accept()) {
 
             chatRepository.findActiveChatByUser(ChatStatus.ACTIVE, chat.getUser1())
                     .ifPresent(c -> {
-                        throw new RuntimeException("Usuário 1 já possui chat ativo");
+                        throw new BusinessRuleException("Usuário 1 já possui chat ativo");
                     });
 
             chatRepository.findActiveChatByUser(ChatStatus.ACTIVE, chat.getUser2())
                     .ifPresent(c -> {
-                        throw new RuntimeException("Usuário 2 já possui chat ativo");
+                        throw new BusinessRuleException("Usuário 2 já possui chat ativo");
                     });
 
             chat.setStatus(ChatStatus.ACTIVE);
@@ -77,14 +82,14 @@ public class ChatService {
 
         return chatRepository.save(chat);
     }
-    
+
     public Chat closeChat(Long chatId) {
 
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
 
         if (chat.getStatus() != ChatStatus.ACTIVE) {
-            throw new RuntimeException("Somente chats ativos podem ser encerrados");
+            throw new BusinessRuleException("Somente chats ativos podem ser encerrados");
         }
 
         chat.setStatus(ChatStatus.CLOSED);
@@ -92,11 +97,11 @@ public class ChatService {
 
         return chatRepository.save(chat);
     }
-    
+
     public List<ChatResponseDTO> getChatsByUser(Long userId) {
 
         List<Chat> chats = chatRepository
-        		.findByUser1IdOrUser2Id(userId, userId);
+                .findByUser1IdOrUser2Id(userId, userId);
 
         return chats.stream()
                 .map(chat -> new ChatResponseDTO(
@@ -111,10 +116,7 @@ public class ChatService {
 
     public List<Chat> getMyChats() {
 
-        Long authenticatedUserId = (Long) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
 
         return chatRepository.findByUser1IdOrUser2Id(
                 authenticatedUserId,
