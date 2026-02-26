@@ -4,16 +4,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-import org.springframework.security.core.context.SecurityContextHolder;
-
 import com.loadingjr.chatapi.domain.dto.ChatResponseDTO;
 import com.loadingjr.chatapi.domain.dto.CreateChatDTO;
 import com.loadingjr.chatapi.domain.dto.RespondChatDTO;
 import com.loadingjr.chatapi.domain.entity.Chat;
 import com.loadingjr.chatapi.domain.entity.User;
 import com.loadingjr.chatapi.domain.enums.ChatStatus;
+import com.loadingjr.chatapi.exception.BadRequestException;
+import com.loadingjr.chatapi.exception.ForbiddenException;
+import com.loadingjr.chatapi.exception.NotFoundException;
 import com.loadingjr.chatapi.repository.ChatRepository;
 import com.loadingjr.chatapi.repository.UserRepository;
+import com.loadingjr.chatapi.security.AuthService;
 
 
 @Service
@@ -21,24 +23,44 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final AuthService authService;
 
     public ChatService(ChatRepository chatRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       AuthService authService) {
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
+        this.authService = authService;
     }
 
     public Chat createChat(CreateChatDTO dto) {
 
         if (dto.requesterId().equals(dto.receiverId())) {
-            throw new RuntimeException("Não pode criar chat consigo mesmo");
+            throw new BadRequestException("Não pode criar chat consigo mesmo");
+        }
+
+        Long authenticatedUserId = authService.getAuthenticatedUserId();
+        if (!authenticatedUserId.equals(dto.requesterId())) {
+            throw new ForbiddenException("Você só pode abrir chat em seu próprio nome");
         }
 
         User requester = userRepository.findById(dto.requesterId())
-                .orElseThrow(() -> new RuntimeException("Solicitante não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Solicitante não encontrado"));
 
         User receiver = userRepository.findById(dto.receiverId())
-                .orElseThrow(() -> new RuntimeException("Destinatário não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Destinatário não encontrado"));
+
+        chatRepository.findByUser1IdOrUser2Id(requester.getId(), requester.getId())
+                .stream()
+                .filter(existing -> existing.getStatus() == ChatStatus.PENDING || existing.getStatus() == ChatStatus.ACTIVE)
+                .filter(existing ->
+                        (existing.getUser1().getId().equals(requester.getId()) && existing.getUser2().getId().equals(receiver.getId())) ||
+                        (existing.getUser1().getId().equals(receiver.getId()) && existing.getUser2().getId().equals(requester.getId()))
+                )
+                .findFirst()
+                .ifPresent(existing -> {
+                    throw new BadRequestException("Já existe um chat pendente ou ativo entre os usuários");
+                });
 
         Chat chat = new Chat();
         chat.setUser1(requester);
@@ -51,22 +73,27 @@ public class ChatService {
     public Chat respondToChat(RespondChatDTO dto) {
 
         Chat chat = chatRepository.findById(dto.chatId())
-                .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
 
         if (chat.getStatus() != ChatStatus.PENDING) {
-            throw new RuntimeException("Chat não está pendente");
+            throw new BadRequestException("Chat não está pendente");
+        }
+
+        Long authenticatedUserId = authService.getAuthenticatedUserId();
+        if (!chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new ForbiddenException("Apenas o usuário que recebeu a solicitação pode responder");
         }
 
         if (dto.accept()) {
 
             chatRepository.findActiveChatByUser(ChatStatus.ACTIVE, chat.getUser1())
                     .ifPresent(c -> {
-                        throw new RuntimeException("Usuário 1 já possui chat ativo");
+                        throw new BadRequestException("Usuário 1 já possui chat ativo");
                     });
 
             chatRepository.findActiveChatByUser(ChatStatus.ACTIVE, chat.getUser2())
                     .ifPresent(c -> {
-                        throw new RuntimeException("Usuário 2 já possui chat ativo");
+                        throw new BadRequestException("Usuário 2 já possui chat ativo");
                     });
 
             chat.setStatus(ChatStatus.ACTIVE);
@@ -81,10 +108,16 @@ public class ChatService {
     public Chat closeChat(Long chatId) {
 
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
+
+        Long authenticatedUserId = authService.getAuthenticatedUserId();
+        if (!chat.getUser1().getId().equals(authenticatedUserId) &&
+                !chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new ForbiddenException("Você não participa deste chat");
+        }
 
         if (chat.getStatus() != ChatStatus.ACTIVE) {
-            throw new RuntimeException("Somente chats ativos podem ser encerrados");
+            throw new BadRequestException("Somente chats ativos podem ser encerrados");
         }
 
         chat.setStatus(ChatStatus.CLOSED);
@@ -95,8 +128,13 @@ public class ChatService {
     
     public List<ChatResponseDTO> getChatsByUser(Long userId) {
 
+        Long authenticatedUserId = authService.getAuthenticatedUserId();
+        if (!authenticatedUserId.equals(userId)) {
+            throw new ForbiddenException("Você só pode consultar seu próprio histórico");
+        }
+
         List<Chat> chats = chatRepository
-        		.findByUser1IdOrUser2Id(userId, userId);
+                .findByUser1IdOrUser2Id(userId, userId);
 
         return chats.stream()
                 .map(chat -> new ChatResponseDTO(
@@ -110,11 +148,7 @@ public class ChatService {
     }
 
     public List<Chat> getMyChats() {
-
-        Long authenticatedUserId = (Long) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+        Long authenticatedUserId = authService.getAuthenticatedUserId();
 
         return chatRepository.findByUser1IdOrUser2Id(
                 authenticatedUserId,
