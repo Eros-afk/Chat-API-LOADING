@@ -97,6 +97,16 @@ public class MessageService {
 
     public Page<MessageResponseDTO> getMessages(Long chatId, Pageable pageable) {
 
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
+
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
+
+        if (!chat.getUser1().getId().equals(authenticatedUserId) &&
+            !chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new UnauthorizedActionException("Você não pode acessar este chat");
+        }
+
         Page<Message> page = messageRepository.findByChatId(chatId, pageable);
 
         return page.map(message -> new MessageResponseDTO(

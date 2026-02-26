@@ -9,8 +9,8 @@ import com.loadingjr.chatapi.domain.enums.ChatStatus;
 import com.loadingjr.chatapi.repository.ChatRepository;
 import com.loadingjr.chatapi.repository.MessageRepository;
 import com.loadingjr.chatapi.repository.UserRepository;
+import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 import com.loadingjr.chatapi.util.CryptoService;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,8 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -47,6 +45,9 @@ class MessageServiceTest {
     @Mock
     private CryptoService cryptoService;
 
+    @Mock
+    private AuthenticatedUserProvider authenticatedUserProvider;
+
     @InjectMocks
     private MessageService messageService;
 
@@ -56,9 +57,7 @@ class MessageServiceTest {
 
     @BeforeEach
     void setUp() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(1L, null)
-        );
+        when(authenticatedUserProvider.getAuthenticatedUserId()).thenReturn(1L);
 
         user1 = new User();
         user1.setId(1L);
@@ -75,16 +74,9 @@ class MessageServiceTest {
         activeChat.setStatus(ChatStatus.ACTIVE);
     }
 
-    @AfterEach
-    void cleanUp() {
-        SecurityContextHolder.clearContext();
-    }
-
     @Test
     void deveNegarListagemDeMensagensParaUsuarioForaDoChat() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(99L, null)
-        );
+        when(authenticatedUserProvider.getAuthenticatedUserId()).thenReturn(99L);
         when(chatRepository.findById(100L)).thenReturn(Optional.of(activeChat));
 
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -96,7 +88,7 @@ class MessageServiceTest {
 
     @Test
     void deveCriptografarMensagemAoEnviar() {
-        SendMessageDTO dto = new SendMessageDTO(100L, 1L, "mensagem clara");
+        SendMessageDTO dto = new SendMessageDTO(100L, "mensagem clara");
 
         when(chatRepository.findById(100L)).thenReturn(Optional.of(activeChat));
         when(userRepository.findById(1L)).thenReturn(Optional.of(user1));

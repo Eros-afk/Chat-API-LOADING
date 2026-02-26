@@ -20,6 +20,18 @@ public class AuthenticatedUserProvider {
             return userId;
         }
 
+        if (principal instanceof String userId) {
+            try {
+                return Long.parseLong(userId);
+            } catch (NumberFormatException ex) {
+                throw new RuntimeException("Principal de autenticação inválido");
+            }
+        }
+
         throw new RuntimeException("Principal de autenticação inválido");
+    }
+
+    public Long getCurrentUserId() {
+        return getAuthenticatedUserId();
     }
 }
