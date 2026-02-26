@@ -20,12 +20,12 @@ class AuthenticatedUserProviderTest {
     }
 
     @Test
-    void shouldReturnCurrentUserIdWhenAuthenticatedWithStringPrincipal() {
+    void shouldReturnAuthenticatedUserIdWhenAuthenticatedWithStringPrincipal() {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("42", null, Collections.emptyList())
         );
 
-        Long userId = authenticatedUserProvider.getCurrentUserId();
+        Long userId = authenticatedUserProvider.getAuthenticatedUserId();
 
         assertEquals(42L, userId);
     }
@@ -33,7 +33,7 @@ class AuthenticatedUserProviderTest {
     @Test
     void shouldThrowWhenUserIsNotAuthenticated() {
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> authenticatedUserProvider.getCurrentUserId());
+                () -> authenticatedUserProvider.getAuthenticatedUserId());
 
         assertEquals("Usuário não autenticado", exception.getMessage());
     }

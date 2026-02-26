@@ -31,7 +31,4 @@ public class AuthenticatedUserProvider {
         throw new RuntimeException("Principal de autenticação inválido");
     }
 
-    public Long getCurrentUserId() {
-        return getAuthenticatedUserId();
-    }
 }
