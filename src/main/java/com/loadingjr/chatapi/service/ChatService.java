@@ -9,7 +9,6 @@ import com.loadingjr.chatapi.domain.enums.ChatStatus;
 import com.loadingjr.chatapi.exception.BusinessRuleException;
 import com.loadingjr.chatapi.exception.NotFoundException;
 import com.loadingjr.chatapi.repository.ChatRepository;
-import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 import com.loadingjr.chatapi.repository.UserRepository;
 import com.loadingjr.chatapi.security.AuthenticatedUserProvider;
 import org.springframework.stereotype.Service;
@@ -36,11 +35,11 @@ public class ChatService {
         Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
 
         if (authenticatedUserId.equals(dto.receiverId())) {
-            throw new RuntimeException("Não pode criar chat consigo mesmo");
+            throw new BusinessRuleException("Não pode criar chat consigo mesmo");
         }
 
         User requester = userRepository.findById(authenticatedUserId)
-                .orElseThrow(() -> new RuntimeException("Solicitante não encontrado"));
+                .orElseThrow(() -> new NotFoundException("Solicitante não encontrado"));
 
         User receiver = userRepository.findById(dto.receiverId())
                 .orElseThrow(() -> new NotFoundException("Destinatário não encontrado"));
@@ -57,6 +56,17 @@ public class ChatService {
 
         Chat chat = chatRepository.findById(dto.chatId())
                 .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
+
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
+
+        if (!chat.getUser1().getId().equals(authenticatedUserId) &&
+            !chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new BusinessRuleException("Você não pode responder este chat");
+        }
+
+        if (!chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new BusinessRuleException("Apenas o destinatário pode responder a solicitação");
+        }
 
         if (chat.getStatus() != ChatStatus.PENDING) {
             throw new BusinessRuleException("Chat não está pendente");
@@ -78,6 +88,7 @@ public class ChatService {
 
         } else {
             chat.setStatus(ChatStatus.CLOSED);
+            chat.setClosedAt(java.time.LocalDateTime.now());
         }
 
         return chatRepository.save(chat);
@@ -87,6 +98,13 @@ public class ChatService {
 
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new NotFoundException("Chat não encontrado"));
+
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
+
+        if (!chat.getUser1().getId().equals(authenticatedUserId) &&
+            !chat.getUser2().getId().equals(authenticatedUserId)) {
+            throw new BusinessRuleException("Você não participa deste chat");
+        }
 
         if (chat.getStatus() != ChatStatus.ACTIVE) {
             throw new BusinessRuleException("Somente chats ativos podem ser encerrados");
@@ -99,6 +117,12 @@ public class ChatService {
     }
 
     public List<ChatResponseDTO> getChatsByUser(Long userId) {
+
+        Long authenticatedUserId = authenticatedUserProvider.getAuthenticatedUserId();
+
+        if (!authenticatedUserId.equals(userId)) {
+            throw new BusinessRuleException("Você só pode visualizar o seu próprio histórico");
+        }
 
         List<Chat> chats = chatRepository
                 .findByUser1IdOrUser2Id(userId, userId);

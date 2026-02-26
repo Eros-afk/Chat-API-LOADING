@@ -1,20 +1,18 @@
 package com.loadingjr.chatapi.controller;
 
-import com.loadingjr.chatapi.domain.entity.User;
-import com.loadingjr.chatapi.repository.UserRepository;
-import com.loadingjr.chatapi.security.JwtService;
+import com.loadingjr.chatapi.domain.dto.AuthTokenResponseDTO;
+import com.loadingjr.chatapi.exception.InvalidCredentialsException;
+import com.loadingjr.chatapi.exception.NotFoundException;
+import com.loadingjr.chatapi.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Optional;
-
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,17 +26,11 @@ class AuthControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private UserRepository userRepository;
-
-    @MockBean
-    private JwtService jwtService;
-
-    @MockBean
-    private PasswordEncoder passwordEncoder;
+    private AuthService authService;
 
     @Test
     void shouldReturnNotFoundWhenUserDoesNotExist() throws Exception {
-        when(userRepository.findByUsername("inexistente")).thenReturn(Optional.empty());
+        when(authService.login(any())).thenThrow(new NotFoundException("Usuário não encontrado"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -55,13 +47,7 @@ class AuthControllerTest {
 
     @Test
     void shouldReturnUnauthorizedWhenPasswordIsInvalid() throws Exception {
-        User user = new User();
-        user.setId(1L);
-        user.setUsername("teste");
-        user.setPassword("hash");
-
-        when(userRepository.findByUsername("teste")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
+        when(authService.login(any())).thenThrow(new InvalidCredentialsException("Senha inválida"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -74,5 +60,18 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.message").value("Senha inválida"))
                 .andExpect(jsonPath("$.path").value("/auth/login"))
                 .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void shouldReturnTokenWhenCredentialsAreValid() throws Exception {
+        when(authService.login(any())).thenReturn(new AuthTokenResponseDTO("jwt-token"));
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"teste","password":"senhaCorreta"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("jwt-token"));
     }
 }
